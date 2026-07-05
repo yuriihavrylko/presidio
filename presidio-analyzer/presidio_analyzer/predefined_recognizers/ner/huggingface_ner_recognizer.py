@@ -324,6 +324,15 @@ class HuggingFaceNerRecognizer(LocalRecognizer):
         else:
             self._load_ort_pipeline()
 
+        # Resolve deferred tokenizer chunker using the pipeline's tokenizer
+        from presidio_analyzer.chunkers import TokenizerBasedTextChunker
+
+        if (
+            isinstance(self.text_chunker, TokenizerBasedTextChunker)
+            and self.text_chunker.is_deferred
+        ):
+            self.text_chunker.resolve(self.ner_pipeline.tokenizer)
+
     def _load_torch_pipeline(self) -> None:
         """Load the NER pipeline using PyTorch backend."""
         # Device validation and fallback
@@ -358,15 +367,6 @@ class HuggingFaceNerRecognizer(LocalRecognizer):
         except Exception:
             logger.exception(f"Failed to load model {self.model_name}")
             raise
-
-        # Resolve deferred tokenizer chunker using the pipeline's tokenizer
-        from presidio_analyzer.chunkers import TokenizerBasedTextChunker
-
-        if (
-            isinstance(self.text_chunker, TokenizerBasedTextChunker)
-            and self.text_chunker.is_deferred
-        ):
-            self.text_chunker.resolve(self.ner_pipeline.tokenizer)
 
     def _load_ort_pipeline(self) -> None:
         """Load the NER pipeline using optimum's ONNX Runtime backend.
