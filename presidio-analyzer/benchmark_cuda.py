@@ -1,4 +1,4 @@
-"""GPU benchmark: torch (CPU vs CUDA) and ort (CPU EP vs CUDA EP).
+"""GPU-only benchmark: torch CUDA and ort CUDAExecutionProvider.
 
 Run this on a machine with an NVIDIA GPU (e.g. a Colab GPU runtime).
 Uses the same 500 real dataset sentences as the CPU/CoreML benchmarks
@@ -11,6 +11,13 @@ overwrites whatever provider from_pretrained() was given - so
 provider="CUDAExecutionProvider" silently no-ops back to CPU unless
 forced back after load(). See benchmark_coreml.py's docstring for the
 full mechanism.
+
+The ort(CUDAExecutionProvider) run is wrapped in a try/except: on
+Colab this has been blocked by a cuDNN ABI conflict between the
+system-wide cuDNN (linked by the preinstalled TensorFlow) and the one
+onnxruntime-gpu needs - an environment/packaging issue, not a
+presidio bug. If it fails, the script reports it and still gives you
+the torch(cuda) numbers.
 
 Usage: python benchmark_cuda.py <model_name>
 
@@ -102,10 +109,12 @@ def main():
         print("No CUDA device visible - check the Colab runtime type (Runtime > Change runtime type > GPU).")
         return
 
-    bench_torch("cpu")
     bench_torch("cuda")
-    bench_ort("CPUExecutionProvider")
-    bench_ort("CUDAExecutionProvider")
+
+    try:
+        bench_ort("CUDAExecutionProvider")
+    except Exception as e:
+        print(f"ort(CUDAExecutionProvider): FAILED - {e}")
 
 
 if __name__ == "__main__":
